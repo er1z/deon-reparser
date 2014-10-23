@@ -27,7 +27,7 @@ var q = require('q');
  app.listen(port);
  console.log('Listening on: '+port);*/
 
-var source = request({
+/*var source = request({
     url: 'http://www.deon.pl/wiadomosci/biznes-gospodarka/art,4357,czy-gaz-na-slowacje-poplynie-przez-polske.html',
     headers: {
         'User-Agent': 'Mozilla/5.0 (Windows NT 6.1; WOW64; rv:31.0) Gecko/20100101 Firefox/31.0'
@@ -40,17 +40,19 @@ var source = request({
 
         var date = $('.aktualnosc .data')[0];
 
-        var re = /([0-9]{2}\.[0-9]{2}\.[0-9]{4}\s+[0-9]{2}:[0-9]{2})/g;
+        var re = /([0-9]{2})\.([0-9]{2})\.([0-9]{4})\s+([0-9]{2}):([0-9]{2})/g;
 
-        var parsedDate = re.exec(cheerio(date).toString());
+        var p = re.exec(cheerio(date).toString());
 
-        console.log(date[0]);
+        var dateObject = new Date(p[3]+'-'+p[2]+'-'+p[1]+' '+p[4]+':'+p[5]);
+
+        console.log(dateObject);
 
     }
 
 });
 
-return;
+return;*/
 
 var source = request({
     url: 'http://deon.pl/rss/pl/29.xml',
@@ -73,7 +75,7 @@ var source = request({
             cheerio(contents[i]).append('<dupa />');
 
             if (i == contents.length - 1) {
-                console.log($.toString());
+                console.log(cheerio($).html());
             }
         });
 
