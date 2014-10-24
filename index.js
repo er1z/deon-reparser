@@ -7,7 +7,7 @@ var express = require('express'),
 
 var router = express.Router();
 
-var q = require('q');
+var Q = require('q');
 
 /*var port = require('./package.json').options.port;
 
@@ -27,32 +27,55 @@ var q = require('q');
  app.listen(port);
  console.log('Listening on: '+port);*/
 
-/*var source = request({
-    url: 'http://www.deon.pl/wiadomosci/biznes-gospodarka/art,4357,czy-gaz-na-slowacje-poplynie-przez-polske.html',
-    headers: {
-        'User-Agent': 'Mozilla/5.0 (Windows NT 6.1; WOW64; rv:31.0) Gecko/20100101 Firefox/31.0'
-    }
-}, function (error, response, body) {
+var getPageDate = function (url) {
 
-    if(response.statusCode==200){
+    var defer = Q.defer();
 
-        var $ = cheerio.load(body);
+    request({
+        url: url,
+        headers: {
+            'User-Agent': 'Mozilla/5.0 (Windows NT 6.1; WOW64; rv:31.0) Gecko/20100101 Firefox/31.0'
+        }
+    }, function (error, response, body) {
 
-        var date = $('.aktualnosc .data')[0];
+        if (response.statusCode == 200) {
 
-        var re = /([0-9]{2})\.([0-9]{2})\.([0-9]{4})\s+([0-9]{2}):([0-9]{2})/g;
+            var $ = cheerio.load(body);
 
-        var p = re.exec(cheerio(date).toString());
+            var date = $('.aktualnosc .data')[0];
 
-        var dateObject = new Date(p[3]+'-'+p[2]+'-'+p[1]+' '+p[4]+':'+p[5]);
+            var re = /([0-9]{2})\.([0-9]{2})\.([0-9]{4})\s+([0-9]{2}):([0-9]{2})/g;
 
-        console.log(dateObject);
+            var p = re.exec(cheerio(date).toString());
 
-    }
+            var dateObject = new Date(p[3] + '-' + p[2] + '-' + p[1] + ' ' + p[4] + ':' + p[5]);
 
-});
+            defer.resolve(dateObject);
 
-return;*/
+        }else{
+            defer.reject(error);
+        }
+
+    });
+
+
+    return defer.promise;
+
+}
+
+var callback = function(node){
+    var defer = Q.defer();
+
+    var link = cheerio('guid', node).text();
+
+    getPageDate(link).then(function(date){
+        cheerio(node).append('<pubDate>'+date.toUTCString()+'</pubDate>');
+
+        defer.resolve();
+    });
+
+    return defer.promise;
+}
 
 var source = request({
     url: 'http://deon.pl/rss/pl/29.xml',
@@ -64,21 +87,21 @@ var source = request({
     if (response.statusCode == 200) {
 
         var $ = cheerio.load(body, {
-            xmlMode: true
+            xmlMode: true,
+            lowerCaseTags: false
         });
 
         var contents = $('item');
 
+        var callbacks = [];
+
         contents.each(function (i) {
-            var link = cheerio('guid', contents[i]).toString();
-
-            cheerio(contents[i]).append('<dupa />');
-
-            if (i == contents.length - 1) {
-                console.log(cheerio($).html());
-            }
+            callbacks.push(callback(contents[i]));
         });
 
+        Q.all(callbacks).then(function(){
+            console.log($.html());
+        });
 
         //res.header("Content-Type", "application/rss+xml");
         //res.status(200).send($.html());
